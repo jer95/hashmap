@@ -1,12 +1,12 @@
 import { LinkedList } from "./linked-list.js";
 
-class HashMap {
+export class HashMap {
   constructor() {
     this.size = 16;
-    this.bucket = [];
+    this.buckets = [];
     this.loadFactor = 0.75;
     for (let a = 0; a < this.size; a++) {
-      this.bucket[a] = new LinkedList();
+      this.buckets[a] = new LinkedList();
     }
   }
 
@@ -21,16 +21,29 @@ class HashMap {
   }
 
   set(key, value) {
+    // add buckets if exceeds loadfactor * size
+    if (this.length() >= this.size * this.loadFactor) {
+      let moreBuckets = new Array(this.size * 2)
+        .fill()
+        .map(() => new LinkedList());
+      let entries = this.entries();
+      this.buckets = moreBuckets;
+      this.size = this.size * 2;
+      for (let a = 0; a < entries.length; a++) {
+        this.set(entries[a][0], entries[a][1]);
+      }
+    }
+
     let index = this.hash(key);
     if (index < 0 || index >= this.size) {
       throw new Error("Trying to access index out of bound");
     }
 
-    let current = this.bucket[index].head;
+    let current = this.buckets[index].head;
     let counter = 0;
 
-    if (this.bucket[index].contains(key)) {
-      while (counter < this.bucket[index].find(key)) {
+    if (this.buckets[index].contains(key)) {
+      while (counter < this.buckets[index].find(key)) {
         current = current.next;
         counter++;
       }
@@ -38,14 +51,14 @@ class HashMap {
       current.value = value;
       return;
     }
-    this.bucket[index].append(key, value);
+    this.buckets[index].append(key, value);
   }
 
   get(key) {
     let index = this.hash(key);
-    let current = this.bucket[index].head;
-    if (this.bucket[index].contains(key)) {
-      for (let a = 0; a < this.bucket[index].find(key); a++) {
+    let current = this.buckets[index].head;
+    if (this.buckets[index].contains(key)) {
+      for (let a = 0; a < this.buckets[index].find(key); a++) {
         current = current.next;
       }
       return current.value;
@@ -56,20 +69,20 @@ class HashMap {
 
   has(key) {
     let index = this.hash(key);
-    return this.bucket[index].contains(key);
+    return this.buckets[index].contains(key);
   }
 
   remove(key) {
     let index = this.hash(key);
-    if (this.bucket[index].contains(key)) {
-      this.bucket[index].removeAt(this.bucket[index].find(key));
+    if (this.buckets[index].contains(key)) {
+      this.buckets[index].removeAt(this.buckets[index].find(key));
       return true;
     }
     return false;
   }
 
   length() {
-    const length = this.bucket.reduce((length, element) => {
+    const length = this.buckets.reduce((length, element) => {
       return (length += element.getSize());
     }, 0);
     return length;
@@ -77,20 +90,20 @@ class HashMap {
 
   clear() {
     for (let a = 0; a < this.size; a++) {
-      let current = this.bucket[a].head;
+      let current = this.buckets[a].head;
       while (current !== null) {
         let nextNode = current.next;
         current.next = null;
         current = nextNode;
       }
-      this.bucket[a].head = null;
+      this.buckets[a].head = null;
     }
   }
 
   keys() {
     const keysArr = [];
     for (let a = 0; a < this.size; a++) {
-      let current = this.bucket[a].head;
+      let current = this.buckets[a].head;
       while (current !== null) {
         keysArr.push(current.key);
         current = current.next;
@@ -102,7 +115,7 @@ class HashMap {
   values() {
     const valuesArr = [];
     for (let a = 0; a < this.size; a++) {
-      let current = this.bucket[a].head;
+      let current = this.buckets[a].head;
       while (current !== null) {
         valuesArr.push(current.value);
         current = current.next;
@@ -114,7 +127,7 @@ class HashMap {
   entries() {
     let nodesArr = [];
     for (let a = 0; a < this.size; a++) {
-      let current = this.bucket[a].head;
+      let current = this.buckets[a].head;
       while (current !== null) {
         nodesArr.push([current.key, current.value]);
         current = current.next;
@@ -123,11 +136,3 @@ class HashMap {
     return nodesArr;
   }
 }
-
-const hash = new HashMap();
-hash.set("Carlos", "Name");
-hash.set("Carla", "Name");
-hash.set("Brooks", "lastname");
-hash.get("Carlos");
-console.log(hash);
-console.log(hash.entries());
